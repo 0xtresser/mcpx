@@ -30,7 +30,7 @@ import { exact } from 'x402/schemes';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'node:crypto';
-import { McpXServer } from './mcpXServer.js';
+import type { McpXServer } from './mcpXServer.js';
 import type { ToolPaymentRequirements } from './types.js';
 
 export type PaymentMode = 'payBeforeService' | 'payThenService';
