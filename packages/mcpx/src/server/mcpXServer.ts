@@ -76,7 +76,6 @@ export class McpXServer extends McpServer {
       _meta: appliedMeta,
     };
 
-    // @ts-expect-error - Handling ZodRawShape compatibility issues between versions
     return super.registerTool(name, appliedConfig, cb);
   }
 

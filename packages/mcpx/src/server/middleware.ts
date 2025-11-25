@@ -455,7 +455,6 @@ export function createX402Middleware(
         {
           [routeKey]: paymentConfig,
         },
-        // @ts-expect-error - FacilitatorConfig type compatibility
         facilitator,
         options?.paywall
       );
