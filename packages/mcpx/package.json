@@ -1,6 +1,6 @@
 {
   "name": "@0xtresser/mcpx",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP framework with built-in X402 payment support",
   "type": "module",
   "main": "./dist/index.js",

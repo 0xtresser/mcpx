@@ -337,70 +337,24 @@ export function paymentMiddleware(
 
       await next();
     } else {
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      type EndArgs =
-        | [cb?: () => void]
-        | [chunk: any, cb?: () => void]
-        | [chunk: any, encoding: BufferEncoding, cb?: () => void];
-      /* eslint-enable @typescript-eslint/no-explicit-any */
+      // payThenService: settle asynchronously after verify succeeds
+      // This avoids blocking on MCP transport delays
+      console.log(`[${new Date().toISOString()}] 🚀 Starting async settle...`);
+      
+      // Fire and forget - don't await
+      settle(decodedPayment, selectedPaymentRequirements)
+        .then((settleResponse) => {
+          console.log(`[${new Date().toISOString()}] 🔍 settle response:${JSON.stringify(settleResponse)}`);
+          if (!settleResponse.success) {
+            console.error(`❌ Settlement failed: ${settleResponse.errorReason}`);
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Settlement error:', error);
+        });
 
-      const originalEnd = res.end.bind(res);
-      let endArgs: EndArgs | null = null;
-
-      // @ts-ignore
-      res.end = function (...args: EndArgs) {
-        endArgs = args;
-        return res; // maintain correct return type
-      };
-
-      // Proceed to the next middleware or route handler
+      // Proceed to the next middleware or route handler immediately
       await next();
-
-      // If the response from the protected route is >= 400, do not settle payment
-      if (res.statusCode >= 400) {
-        // @ts-ignore
-        res.end = originalEnd;
-        if (endArgs) {
-          // @ts-ignore
-          originalEnd(...(endArgs as Parameters<typeof res.end>));
-        }
-        return;
-      }
-
-      try {
-        const settleResponse = await settle(decodedPayment, selectedPaymentRequirements);
-        console.log(`[${new Date().toISOString()}] 🔍 settle response:${JSON.stringify(settleResponse)}`); // to be removed
-        const responseHeader = settleResponseHeader(settleResponse);
-        res.setHeader('X-PAYMENT-RESPONSE', responseHeader);
-
-        // if the settle fails, return an error
-        if (!settleResponse.success) {
-          res.status(402).json({
-            x402Version,
-            error: settleResponse.errorReason,
-            accepts: toJsonSafe(paymentRequirements),
-          });
-          return;
-        }
-      } catch (error) {
-        console.error(error);
-        // If settlement fails and the response hasn't been sent yet, return an error
-        if (!res.headersSent) {
-          res.status(402).json({
-            x402Version,
-            error,
-            accepts: toJsonSafe(paymentRequirements),
-          });
-          return;
-        }
-      } finally {
-        // @ts-ignore
-        res.end = originalEnd;
-        if (endArgs) {
-          // @ts-ignore
-          originalEnd(...(endArgs as Parameters<typeof res.end>));
-        }
-      }
     }
   };
 }
