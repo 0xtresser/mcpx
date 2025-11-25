@@ -1,5 +1,3 @@
-/// <reference types="vitest" />
-
 import { describe, expect, it } from 'vitest';
 import { resolvePaymentMode } from '../src/server/middleware.js';
 
@@ -15,7 +13,7 @@ describe('resolvePaymentMode', () => {
 
   it('falls back to payThenService for unknown values', () => {
     expect(resolvePaymentMode({ mode: 'payThenService' })).toBe('payThenService');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(resolvePaymentMode({ mode: 'not-a-real-mode' as any })).toBe('payThenService');
   });
 });
-

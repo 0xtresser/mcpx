@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import {
   computeRoutePatterns,
   findMatchingPaymentRequirements,
@@ -7,28 +7,31 @@ import {
   toJsonSafe,
 } from 'x402/shared';
 import { getPaywallHtml } from 'x402/paywall';
-import {
+import type {
   FacilitatorConfig,
   ERC20TokenAmount,
-  moneySchema,
   PaymentPayload,
   PaymentRequirements,
   PaywallConfig,
   Resource,
   RoutesConfig,
+} from 'x402/types';
+import {
+  moneySchema,
   settleResponseHeader,
   SupportedEVMNetworks,
   SupportedSVMNetworks,
 } from 'x402/types';
 import { useFacilitator } from 'x402/verify';
-import { Address, getAddress } from 'viem';
-import { Address as SolanaAddress } from '@solana/kit';
+import type { Address } from 'viem';
+import { getAddress } from 'viem';
+import type { Address as SolanaAddress } from '@solana/kit';
 import { exact } from 'x402/schemes';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'node:crypto';
 import { McpXServer } from './mcpXServer.js';
-import { ToolPaymentRequirements } from './types.js';
+import type { ToolPaymentRequirements } from './types.js';
 
 export type PaymentMode = 'payBeforeService' | 'payThenService';
 
@@ -83,13 +86,15 @@ function consumeCachedPaymentConfig(key: string) {
   return undefined;
 }
 
-function logPaymentResponseHeader(headers: [string, any][]) {
+function logPaymentResponseHeader(headers: [string, string | number | readonly string[]][]) {
   const header = headers.find(([k]) => k.toLowerCase() === 'x-payment-response');
   if (header && typeof header[1] === 'string') {
     try {
       const json = Buffer.from(header[1], 'base64').toString('utf-8');
+      // eslint-disable-next-line no-console
       console.log('🧾 X-PAYMENT-RESPONSE (Settlement):', JSON.parse(json));
-    } catch (e) {
+    } catch {
+      // eslint-disable-next-line no-console
       console.log('🧾 X-PAYMENT-RESPONSE (Raw):', header[1]);
     }
   }
@@ -143,7 +148,7 @@ export function paymentMiddleware(
     const resourceUrl: Resource =
       resource || (`${req.protocol}://${req.headers.host}${req.path}` as Resource);
 
-    let paymentRequirements: PaymentRequirements[] = [];
+    const paymentRequirements: PaymentRequirements[] = [];
 
     // evm networks
     if (SupportedEVMNetworks.includes(network)) {
@@ -288,6 +293,7 @@ export function paymentMiddleware(
 
     try {
       const response = await verify(decodedPayment, selectedPaymentRequirements);
+      // eslint-disable-next-line no-console
       console.log(`[${new Date().toISOString()}] 🔍 verify response:${JSON.stringify(response)}`); // to be removed
       if (!response.isValid) {
         res.status(402).json({
@@ -311,6 +317,7 @@ export function paymentMiddleware(
     if (mode === 'payBeforeService') {
       try {
         const settleResponse = await settle(decodedPayment, selectedPaymentRequirements);
+        // eslint-disable-next-line no-console
         console.log(`[${new Date().toISOString()}] 🔍 settle response:${JSON.stringify(settleResponse)}`);
         const responseHeader = settleResponseHeader(settleResponse);
         res.setHeader('X-PAYMENT-RESPONSE', responseHeader);
@@ -339,11 +346,13 @@ export function paymentMiddleware(
     } else {
       // payThenService: settle asynchronously after verify succeeds
       // This avoids blocking on MCP transport delays
+      // eslint-disable-next-line no-console
       console.log(`[${new Date().toISOString()}] 🚀 Starting async settle...`);
       
       // Fire and forget - don't await
       settle(decodedPayment, selectedPaymentRequirements)
         .then((settleResponse) => {
+          // eslint-disable-next-line no-console
           console.log(`[${new Date().toISOString()}] 🔍 settle response:${JSON.stringify(settleResponse)}`);
           if (!settleResponse.success) {
             console.error(`❌ Settlement failed: ${settleResponse.errorReason}`);
@@ -359,6 +368,8 @@ export function paymentMiddleware(
   };
 }
 
+type HeaderValue = string | number | readonly string[];
+
 /**
  * Creates an Express middleware that handles x402 payment protection for MCP tools.
  */
@@ -370,7 +381,7 @@ export function createX402Middleware(
     // Track if next() has been called
     let nextCalled = false;
     let cacheKey: string | null = null;
-    const safeNext = (err?: any) => {
+    const safeNext = (err?: unknown) => {
       if (!nextCalled) {
         nextCalled = true;
         if (cacheKey) {
@@ -383,20 +394,20 @@ export function createX402Middleware(
 
     try {
       // 1. Parse body to check if it's a tool call
-      const body = req.body;
+      const body = req.body as Record<string, unknown> | undefined;
       if (!body || typeof body !== 'object') {
         return safeNext();
       }
 
       // Check for JSON-RPC method
-      const method = (body as any).method;
+      const method = body.method;
       if (method !== 'tools/call') {
         return safeNext();
       }
 
       // 2. Get tool name
-      const params = (body as any).params;
-      const toolName = params?.name;
+      const params = body.params as Record<string, unknown> | undefined;
+      const toolName = params?.name as string | undefined;
 
       if (!toolName) {
         return safeNext();
@@ -444,44 +455,44 @@ export function createX402Middleware(
         {
           [routeKey]: paymentConfig,
         },
-        // @ts-ignore - FacilitatorConfig type compatibility
+        // @ts-expect-error - FacilitatorConfig type compatibility
         facilitator,
         options?.paywall
       );
 
       const bufferedState = {
-        writeHead: null as any[] | null,
-        writes: [] as any[][],
-        end: null as any[] | null,
+        writeHead: null as unknown[] | null,
+        writes: [] as unknown[][],
+        end: null as unknown[] | null,
         endCalled: false,
-        headers: [] as [string, any][],
+        headers: [] as [string, HeaderValue][],
         statusCode: null as number | null,
       };
 
       const responseProxy = new Proxy(res, {
         get(target, prop, receiver) {
           if (prop === 'writeHead') {
-            return (statusCode: number, ...args: any[]) => {
+            return (statusCode: number, ...args: unknown[]) => {
               bufferedState.statusCode = statusCode;
               bufferedState.writeHead = args;
               return responseProxy;
             };
           }
           if (prop === 'write') {
-            return (...args: any[]) => {
+            return (...args: unknown[]) => {
               bufferedState.writes.push(args);
               return true;
             };
           }
           if (prop === 'end') {
-            return (...args: any[]) => {
+            return (...args: unknown[]) => {
               bufferedState.end = args.length > 0 ? args : null;
               bufferedState.endCalled = true;
               return responseProxy;
             };
           }
           if (prop === 'setHeader') {
-            return (name: string, value: any) => {
+            return (name: string, value: HeaderValue) => {
               bufferedState.headers.push([name, value]);
               return responseProxy;
             };
@@ -506,7 +517,7 @@ export function createX402Middleware(
         },
         set(target, prop, value, receiver) {
           if (prop === 'statusCode') {
-            bufferedState.statusCode = value;
+            bufferedState.statusCode = value as number;
             return true;
           }
           return Reflect.set(target, prop, value, receiver);
@@ -539,7 +550,9 @@ export function createX402Middleware(
         for (const [name, value] of bufferedState.headers) {
           try {
             res.setHeader(name, value);
-          } catch {}
+          } catch {
+            // ignore header setting errors
+          }
         }
 
         if (bufferedState.statusCode) {
@@ -547,18 +560,18 @@ export function createX402Middleware(
         }
 
         if (bufferedState.writeHead && !res.headersSent) {
-          // @ts-ignore
+          // @ts-expect-error - dynamic writeHead call
           res.writeHead(bufferedState.statusCode || res.statusCode, ...bufferedState.writeHead);
         }
 
         for (const args of bufferedState.writes) {
-          // @ts-ignore
+          // @ts-expect-error - dynamic write call
           res.write(...args);
         }
 
         if (bufferedState.endCalled) {
           if (bufferedState.end) {
-            // @ts-ignore
+            // @ts-expect-error - dynamic end call
             res.end(...bufferedState.end);
           } else {
             res.end();
@@ -609,14 +622,17 @@ export function createMcpRequestHandler(serverFactory: () => McpXServer) {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => {
           const id = randomUUID();
+          // eslint-disable-next-line no-console
           console.log(`🔑 Generated session ID: ${id}`);
           return id;
         },
         onsessioninitialized: async (sessionId) => {
+          // eslint-disable-next-line no-console
           console.log(`📱 New session initialized: ${sessionId}`);
           sessions.set(sessionId, { server, transport });
         },
         onsessionclosed: async (sessionId) => {
+          // eslint-disable-next-line no-console
           console.log(`👋 Session closed: ${sessionId}`);
           sessions.delete(sessionId);
         },
@@ -647,6 +663,7 @@ export function createMcpRequestHandler(serverFactory: () => McpXServer) {
     }
 
     try {
+      // eslint-disable-next-line no-console
       console.log(`[${new Date().toISOString()}] 🔍 handleRequest:${JSON.stringify(req.body)}`); // to be removed
       await entry.transport.handleRequest(req, res, req.body);
     } catch (error) {

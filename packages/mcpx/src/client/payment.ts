@@ -67,25 +67,27 @@ function extractToolName(init?: RequestInit): string | undefined {
   return undefined;
 }
 
+type NetworkName = Parameters<typeof createSigner>[0];
+
 async function createPaymentSigner(config: PaymentSignerConfig): Promise<MultiNetworkSigner | Awaited<ReturnType<typeof createSigner>>> {
   if (config.evm && config.svm) {
     const evmSigner = await createSigner(
-      (config.evm.network || DEFAULT_EVM_NETWORK) as any,
+      (config.evm.network || DEFAULT_EVM_NETWORK) as NetworkName,
       config.evm.privateKey as Hex,
     );
     const svmSigner = await createSigner(
-      (config.svm.network || DEFAULT_SVM_NETWORK) as any,
+      (config.svm.network || DEFAULT_SVM_NETWORK) as NetworkName,
       config.svm.privateKey,
     );
     return { evm: evmSigner, svm: svmSigner } as MultiNetworkSigner;
   }
 
   if (config.evm) {
-    return createSigner((config.evm.network || DEFAULT_EVM_NETWORK) as any, config.evm.privateKey as Hex);
+    return createSigner((config.evm.network || DEFAULT_EVM_NETWORK) as NetworkName, config.evm.privateKey as Hex);
   }
 
   if (config.svm) {
-    return createSigner((config.svm.network || DEFAULT_SVM_NETWORK) as any, config.svm.privateKey);
+    return createSigner((config.svm.network || DEFAULT_SVM_NETWORK) as NetworkName, config.svm.privateKey);
   }
 
   throw new Error('At least one signer configuration (evm or svm) must be provided');
@@ -100,7 +102,7 @@ export async function createX402Fetch(options: X402FetchOptions): Promise<typeof
     return baseFetch(input, normalizedInit);
   };
 
-  const wrappedFetch = wrapFetchWithPayment(normalizedBaseFetch, signer as any);
+  const wrappedFetch = wrapFetchWithPayment(normalizedBaseFetch, signer as Parameters<typeof wrapFetchWithPayment>[1]);
 
   const headerAwareFetch: typeof fetch = async (input, init) => {
     const normalizedInit = normalizeRequestInit(init);
@@ -127,4 +129,3 @@ export async function createX402Fetch(options: X402FetchOptions): Promise<typeof
 
   return headerAwareFetch;
 }
-

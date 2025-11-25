@@ -1,8 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
-import { ZodRawShape } from 'zod';
-import {
+import type { ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
+import type { ZodRawShape } from 'zod';
+import type {
   ToolPaymentRequirements,
   McpXServerConfig,
   ToolPaymentDefinition,
@@ -18,7 +18,7 @@ export class McpXServer extends McpServer {
   private toolPayments = new Map<string, ToolPaymentEntry>();
   private config: McpXServerConfig;
 
-  constructor(config: McpXServerConfig, options?: any) {
+  constructor(config: McpXServerConfig, options?: ConstructorParameters<typeof McpServer>[1]) {
     super(config, options);
     this.config = config;
   }
@@ -31,7 +31,7 @@ export class McpXServer extends McpServer {
    * @param payment Optional payment requirements for x402 protocol
    * @param cb The callback function to execute when the tool is called
    */
-  // @ts-ignore - Overriding method signature slightly for payment support
+  // @ts-expect-error - Overriding method signature slightly for payment support
   registerTool<InputArgs extends ZodRawShape, OutputArgs extends ZodRawShape>(
     name: string,
     config: {
@@ -76,7 +76,7 @@ export class McpXServer extends McpServer {
       _meta: appliedMeta,
     };
 
-    // @ts-ignore - Handling ZodRawShape compatibility issues between versions
+    // @ts-expect-error - Handling ZodRawShape compatibility issues between versions
     return super.registerTool(name, appliedConfig, cb);
   }
 
@@ -134,4 +134,3 @@ export class McpXServer extends McpServer {
     };
   }
 }
-
