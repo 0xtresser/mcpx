@@ -1,0 +1,19 @@
+{
+  "name": "basic-client-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --loader ts-node/esm client.ts",
+    "start:bun": "bun run client.ts"
+  },
+  "dependencies": {
+    "@0xtresser/mcpx": "file:../../packages/mcpx"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}
+
