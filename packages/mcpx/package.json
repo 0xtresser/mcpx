@@ -1,0 +1,87 @@
+{
+  "name": "@0xtresser/mcpx",
+  "version": "0.1.0",
+  "description": "MCP framework with built-in X402 payment support",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier \"**/*.{ts,js,json,md}\" --write",
+    "format:check": "prettier \"**/*.{ts,js,json,md}\" --check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run lint && npm run test && npm run build",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "x402",
+    "payments",
+    "tooling",
+    "model-context-protocol"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0xtresser/mcpx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/0xtresser/mcpx/issues"
+  },
+  "homepage": "https://github.com/0xtresser/mcpx#readme",
+  "author": "0xtresser",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "@solana/kit": "^2.1.1",
+    "viem": "^2.21.26",
+    "x402": "^0.7.2",
+    "x402-express": "^0.7.1",
+    "x402-fetch": "^0.7.0",
+    "zod": "^3.23.8"
+  },
+  "peerDependencies": {
+    "express": "^4.18.2 || ^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.9.3",
+    "@eslint/js": "^9.14.0",
+    "eslint": "^9.14.0",
+    "prettier": "^3.3.3",
+    "rimraf": "^5.0.7",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.8.1",
+    "vitest": "^2.1.4"
+  }
+}
